@@ -1,0 +1,34 @@
+{
+  "name": "jquery",
+  "version": "1.0.0",
+  "description": "try to achieve some function like jquery",
+  "main": "jquery.js",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BoringDay/jquery.git"
+  },
+  "author": "baichun",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BoringDay/jquery/issues"
+  },
+  "homepage": "https://github.com/BoringDay/jquery#readme",
+  "devDependencies": {
+    "@babel/core": "^7.6.3",
+    "babel-eslint": "^10.0.3",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-preset-es2015": "^6.24.1",
+    "eslint": "^6.5.1",
+    "install": "^0.13.0",
+    "npm": "^6.12.0",
+    "rollup": "^1.0.0",
+    "rollup-plugin-babel": "^2.7.1",
+    "rollup-watch": "^4.3.1",
+    "standard": "^14.3.1"
+  },
+  "eslintIgnore": []
+}
