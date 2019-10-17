@@ -1,3 +1,8 @@
+/**
+ * DOM 属性
+ * 获取和设置页面元素的 DOM 属性。
+ **/
+
 import { isUndef, isDef, isString, isPlainObject, isFunction, isBoolean, removeExtraSpace } from '../util/index.js'
 
 /**
@@ -10,7 +15,7 @@ function _addOrRemoveClass (type, className) {
   switch (true) {
     case isString(className):
       // eslint-disable-next-line no-case-declarations
-      const classes = removeExtraSpace(className)
+      const classes = removeExtraSpace(className).split(' ')
       nodes.forEach(node => {
         classes.map(item => {
           node.classList[type](item)
@@ -175,7 +180,7 @@ export function toggleClass (className, switchFlag) {
   switch (true) {
     // .toggleClass( className )
     case isString(className) && isUndef(switchFlag):
-      classes = removeExtraSpace(className)
+      classes = removeExtraSpace(className).split(' ')
       nodes.forEach((node, nodeIndex) => {
         classes.map(item => {
           node.classList.contains(item) ? node.classList.remove(item) : node.classList.add(item)
@@ -184,8 +189,8 @@ export function toggleClass (className, switchFlag) {
       break
       // .toggleClass( className, switch )
     case isString(className) && isDef(switchFlag):
-      classes = removeExtraSpace(className)
-      nodes.forEach((node, nodeIndex) => {
+      classes = removeExtraSpace(className).split(' ')
+      nodes.forEach((node) => {
         classes.map(item => {
           switchFlag ? node.classList.remove(item) : node.classList.add(item)
         })

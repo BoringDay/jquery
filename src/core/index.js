@@ -3,8 +3,10 @@
  * https://github.com/jquery/sizzle
  */
 import Sizzle from '../library/sizzle.min.js'
-import * as dom from './dom'
 import { isString } from '../util/index.js'
+
+import * as dom from './dom'
+import Callbacks from './callbacks'
 
 // 获取目标元素
 function _getTargetElement (el) {
@@ -28,5 +30,7 @@ function jquery (selector) {
     length: elements.length
   }, dom)
 }
+
+jquery.Callbacks = Callbacks
 
 window.$ = window.Jquery = window.jquery = jquery

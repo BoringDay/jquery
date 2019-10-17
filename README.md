@@ -2,11 +2,23 @@
 
 try to achieve some function like jquery
 
-## rollup 参考安装
+## 目录结构
 
-## 注意
+├── Readme.md
+├── src // 配置  
+│ ├── core  
+│ │ ├── ajax.js // ajax 相关函数：待完整  
+│ │ ├── callbacks.js // 回调对象  
+│ │ ├── dom.js // Dom 属性：获取和设置页面元素的 DOM 属性。  
+│ │ |── index.js // 入口文件  
+| |  
+│ ├── library //外部库  
+| |  
+│ ├── util // 工具类
 
-- https://lengstorf.com/learn-rollup-js/ 用的版本太低了，导致配置文件和现在的对应不上。
+## rollup
+
+- https://lengstorf.com/learn-rollup-js/ 根据这个用的版本太低了，导致配置文件和现在的对应不上。
   。
 
 - 安装 rollup-plugin-babel@4.3.3

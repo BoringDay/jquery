@@ -5,8 +5,8 @@
       console.log($(this))
       console.log(index, oldhtml)
     })
-    .addClass("addClass").
-    .addClass(index => {
+    .addClass('addClass addClass2')
+    .addClass(function (index) {
       return 'addClassDiyItem' + index
     })
     .attr({
@@ -17,4 +17,26 @@
   $('.input').val(function (index, value) {
     return value + ' ' + 2
   })
+
+  function a () {
+    console.log('a')
+  }
+  function b (arg1, arg2, arg3) {
+    console.log('b', arg1, arg2, arg3)
+    return false
+  }
+  function c () {
+    console.log('c')
+  }
+
+  console.log('---------test callbacks------------')
+  var callbacks = $.Callbacks()
+  callbacks.add(a)
+  callbacks.add(a)
+  callbacks.fire(1, 2, 3)
+  console.log('=============')
+  callbacks.add(b)
+  callbacks.add(c)
+  callbacks.remove([a, b])
+  callbacks.fire(1, 2, 3)
 })(window, window.$)

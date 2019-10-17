@@ -23,7 +23,12 @@ export function isPlainObject (obj) {
 export function isBoolean (obj) {
   return _toString.call(obj) === '[object Boolean]'
 }
+
+export function isArray (obj) {
+  return _toString.call(obj) === '[object Array]'
+}
+
 // 删除字符串多余空格
 export function removeExtraSpace (val) {
-  return val.replace(/[' ']+/g, ' ').split(/\s/)
+  return isString(val) ? val.replace(/[' ']+/g, ' ') : ''
 }

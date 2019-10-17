@@ -1,7 +1,7 @@
 import babel from 'rollup-plugin-babel'
 
 export default {
-  input: 'src/core/main.js',
+  input: 'src/core/index.js',
   output: {
     file: 'build/jquery.js',
     format: 'iife',
