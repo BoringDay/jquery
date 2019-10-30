@@ -1,42 +1,11 @@
 (function (window, $) {
-  console.log($('.test')
-    .html('aaaa')
-    .html(function (index, oldhtml) {
-      console.log($(this))
-      console.log(index, oldhtml)
-    })
-    .addClass('addClass addClass2')
-    .addClass(function (index) {
-      return 'addClassDiyItem' + index
-    })
-    .attr({
-      'data-aa': 1,
-      bb: 2
-    }).html())
-
-  $('.input').val(function (index, value) {
-    return value + ' ' + 2
+  const p1 = new Promise(function (resolve, reject) {
+    setTimeout(function () {
+      resolve('aaa')
+    }, 2000)
+  }).then(function (res) {
+    console.log('then1', res)
+  }).then(function (res) {
+    console.log('then2', res)
   })
-
-  function a () {
-    console.log('a')
-  }
-  function b (arg1, arg2, arg3) {
-    console.log('b', arg1, arg2, arg3)
-    return false
-  }
-  function c () {
-    console.log('c')
-  }
-
-  console.log('---------test callbacks------------')
-  var callbacks = $.Callbacks()
-  callbacks.add(a)
-  callbacks.add(a)
-  callbacks.fire(1, 2, 3)
-  console.log('=============')
-  callbacks.add(b)
-  callbacks.add(c)
-  callbacks.remove([a, b])
-  callbacks.fire(1, 2, 3)
 })(window, window.$)

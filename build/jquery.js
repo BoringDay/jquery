@@ -632,6 +632,164 @@
     return isString(val) ? val.replace(/[' ']+/g, ' ') : '';
   }
 
+  var PENDING = 'PENDING';
+  var FULFILLED = 'FULFILLED';
+  var REJECTED = 'REJECTED';
+
+  // 第一版实现了单个then和reject函数的执行，对于多个then的时候并没有存储一个回调队列
+
+  function Promise(fn) {
+    var _this = this;
+
+    this._status = PENDING; // 状态
+    this._value = undefined; // then的值
+    this._fulfilledQuene = []; // resolved状态的回调函数队列
+    this._rejectedQuene = []; // resolved状态的回调函数队列
+
+    /**
+     * @param {any} val 包括可能是Promise，增加判断
+     */
+    this.resolve = function (val) {
+      if (_this._status !== PENDING) return;
+
+      _this._value = val;
+
+      var runFullfilled = function runFullfilled(data) {
+        while (_this._fulfilledQuene.length) {
+          var callback = _this._fulfilledQuene.shift();
+          callback(data);
+        }
+      };
+
+      var runRejected = function runRejected(e) {
+        while (_this._rejectedQuene.length) {
+          var callback = _this._rejectedQuene.shift();
+          callback(e);
+        }
+      };
+
+      /**
+       * 如果resolve的参数为Promise对象，则必须等待该Promise对象状态改变后,
+       * 当前Promsie的状态才会改变，且状态取决于参数Promsie对象的状态
+       */
+      if (val instanceof Promise) {
+        val.then(function (data) {
+          _this._status = FULFILLED;
+          _this._value = data;
+          runFullfilled(data);
+        }).catch(function (e) {
+          _this._status = REJECTED;
+          _this._value = e;
+          runRejected(e);
+        });
+      } else {
+        _this._status = FULFILLED;
+        _this._value = val;
+        runFullfilled(_this._value);
+      }
+    };
+
+    this.reject = function (e) {
+      if (_this._status !== PENDING) return;
+
+      _this._status = REJECTED;
+      _this._value = e;
+
+      while (_this._rejectedQuene.length) {
+        _this._rejectedQuene.shift()(e);
+      }
+    };
+
+    /**
+    * then 返回一个新的 Promise 对象，并且需要将回调函数加入到执行队列中
+    * @param {function} onFulfilled resolved状态的回调函数
+    * @param {function} onRejected rejected状态的回调函数
+    */
+    this.then = function (onFulfilled, onRejected) {
+      // eslint-disable-next-line promise/param-names
+      return new Promise(function (onFulfilledNext, onRejectedNext) {
+        /**
+         * 注意：
+         * 返回的新的 Promise 对象的状态依赖于  当前 then 方法  回调函数执行的情况以及返回值
+         */
+        var fulfilled = function fulfilled(value) {
+          try {
+            if (!isFunction(onFulfilled)) {
+              onFulfilledNext(value);
+            } else {
+              var res = onFulfilled(value);
+              if (res instanceof Promise) {
+                // 如果当前回调函数返回Promise对象，必须等待其状态改变后在执行下一个回调
+                res.then(onFulfilledNext, onRejectedNext);
+              } else {
+                // 否则会将返回结果直接作为参数，传入下一个then的回调函数，并立即执行下一个then的回调函数
+                onFulfilledNext(res);
+              }
+            }
+          } catch (e) {
+            onRejectedNext(e);
+          }
+        };
+
+        // 逻辑同上
+        var rejected = function rejected(error) {
+          try {
+            if (!isFunction(onRejected)) {
+              onRejectedNext(error);
+            } else {
+              var res = onRejected(error);
+              if (res instanceof Promise) {
+                res.then(onFulfilledNext, onRejectedNext);
+              } else {
+                onFulfilledNext(res);
+              }
+            }
+          } catch (e) {
+            onRejectedNext(e);
+          }
+        };
+
+        // 增加状态判断
+        switch (_this._status) {
+          case PENDING:
+            onFulfilled && _this._fulfilledQuene.push(fulfilled);
+            onRejected && _this._rejectedQuene.push(rejected);
+            break;
+          case FULFILLED:
+            fulfilled(_this._value);
+            break;
+          case REJECTED:
+            rejected(_this._value);
+            break;
+        }
+      });
+    };
+
+    /**
+     * @param {function} onRejected rejected状态的回调函数
+     */
+    this.catch = function (onRejected) {
+      // onRejected && this._rejectedQuene.push(onRejected) =>可转换为下面写法
+      return _this.then(undefined, onRejected);
+    };
+
+    this.finally = function (onFinally) {
+      return _this.then(onFinally, onFinally);
+    };
+
+    // 初始化
+    if (!isFunction(fn)) {
+      throw new Error('Promise must accept a function as a parameter');
+    }
+    try {
+      fn && fn(this.resolve.bind(this), this.reject.bind(this));
+    } catch (e) {
+      this.reject(e);
+    }
+
+    return this;
+  }
+
   /**
    * DOM 属性
    * 获取和设置页面元素的 DOM 属性。
@@ -892,7 +1050,7 @@
 
   // 回调列表中添加一个回调或回调的集合。
   function add(callbacks) {
-    var _this = this;
+    var _this2 = this;
 
     if (!(isArray(callbacks) || isFunction(callbacks))) return this;
 
@@ -902,8 +1060,8 @@
     callbacks = isFunction(callbacks) ? [callbacks] : callbacks;
     callbacks.map(function (item) {
       // flags:unique: 确保一次只能添加一个回调(所以在列表中没有重复的回调)
-      if (!_this.flags.has('unique') || _this.flags.has('unique') && !_this.has(item)) {
-        _this.callbackList.push(item);
+      if (!_this2.flags.has('unique') || _this2.flags.has('unique') && !_this2.has(item)) {
+        _this2.callbackList.push(item);
       }
     });
 
@@ -931,26 +1089,36 @@
 
   // 传入指定的参数调用所有的回调
   function fire() {
-    if (this.isDisabled) return this;
+    return fireWith(this, arguments);
+  }
+
+  /**
+   * 访问给定的上下文和参数列表中的所有回调。
+   * @param {Object} context 该列表中的回调被触发的上下文引用
+   * @param {Array} args 一个参数或参数列表传回给回调列表。
+   */
+  function fireWith(context, args) {
+    var _this = context;
+    if (_this.isDisabled) return _this;
 
     // flags:once-确保这个回调列表只执行（ .fire() ）一次
-    if (this.flags.has('once') && this.fireCount >= 1) {
-      return this;
+    if (_this.flags.has('once') && _this.fireCount >= 1) {
+      return _this;
     }
 
-    ++this.fireCount;
+    ++_this.fireCount;
 
-    var callbackListLength = this.callbackList.length;
+    var callbackListLength = _this.callbackList.length;
     for (var i = 0; i < callbackListLength; i++) {
-      var fn = this.callbackList[i];
-      var flag = fn.apply(this, arguments);
+      var fn = _this.callbackList[i];
+      var flag = fn.apply(_this, args);
 
       // flags:stopOnFalse-当一个回调返回false 时中断调用
-      if (this.flags.has('stopOnFalse') && flag === false) {
-        return this;
+      if (_this.flags.has('stopOnFalse') && flag === false) {
+        return _this;
       }
     }
-    return this;
+    return _this;
   }
 
   // 确定回调是否至少已经调用一次。
@@ -1030,6 +1198,89 @@
   }
 
   /**
+   * 提供一种方法来执行一个或多个对象的回调函数， Deferred(延迟)对象通常表示异步事件。
+   * @param {Object} deferreds 一个或多个延迟对象，或者普通的JavaScript对象。
+   */
+
+  function when(deferreds) {
+    return '';
+  }
+
+  /**
+   * 核心 API
+   */
+  var holdReadyCount = 0; // 延迟Ready数
+  var isDOMContentLoaded = false; // dom是否load完
+  var readyCallbacks = []; // ready回调队列
+
+  // 执行ready队列里面的函数
+  function _executeReadyCallback(jq, callback) {
+    callback && readyCallbacks.push(callback);
+    if (holdReadyCount <= 0) {
+      try {
+        for (var i = 0; i < readyCallbacks.length; i++) {
+          var fn = readyCallbacks[i];
+          fn && fn();
+        }
+      } catch (e) {
+        jq.readyException(e);
+      }
+    }
+  }
+
+  /**
+   * 暂停或恢复.ready() 事件的执行
+   * @param {Boolean} hold 指示是否暂停或恢复被请求的ready事件
+   */
+  function holdReady(hold) {
+    hold ? ++holdReadyCount : --holdReadyCount;
+
+    if (holdReadyCount <= 0) {
+      holdReadyCount = 0;
+      _executeReadyCallback(this);
+    }
+
+    return this;
+  }
+
+  /**
+   * 放弃jQuery控制$ 变量。
+   * @param {Boolean} removeAll 判断是否从全局作用域中内去除所有jQuery变量(包括jQuery本身)
+   */
+
+  function noConflict(removeAll) {
+    return this;
+  }
+
+  // A Promise-like object (or "thenable") that resolves when the document is ready.
+  function ready(callback) {
+    var _this = this;
+
+    if (isDOMContentLoaded) {
+      _executeReadyCallback(this, callback);
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        isDOMContentLoaded = true;
+        _executeReadyCallback(_this, callback);
+      });
+    }
+    return this;
+  }
+
+  /**
+   * 等效的函数中的函数同步抛出错误的时候，这个方法就会被触发。默认情况下，在一个超时，它重新抛出错误，因此它被记录在控制台中，并传递给window.onerror，而不是被静悄悄的吞噬。如果你想以不同的方式处理这种错误，可以覆盖此方法
+   * @param {error} error An error thrown in the function wrapped in jQuery().
+   */
+  function readyException(error) {
+    throw error;
+  }
+
+  /**
+   * 提供一种方法来执行一个或多个对象的回调函数， Deferred(延迟)对象通常表示异步事件。
+   */
+  var when$1 = when;
+
+  /**
    * sizzle引擎，根据传入选择器返回元素,根据传入选择器从右往左向dom属往上查询
    * https://github.com/jquery/sizzle
    */
@@ -1058,7 +1309,13 @@
   }
 
   jquery.Callbacks = Callbacks;
+  jquery.holdReady = holdReady;
+  jquery.noConflict = noConflict;
+  jquery.ready = ready;
+  jquery.readyException = readyException;
+  jquery.when = when$1;
 
   window.$ = window.Jquery = window.jquery = jquery;
+  window.Promise = Promise;
 
 }());
