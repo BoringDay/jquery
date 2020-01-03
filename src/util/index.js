@@ -32,3 +32,9 @@ export function isArray (obj) {
 export function removeExtraSpace (val) {
   return isString(val) ? val.replace(/[' ']+/g, ' ') : ''
 }
+
+export function formatQueryString (data) {
+  return Object.keys(data).reduce((prev, cur) => {
+    return `${prev ? prev + '&' : ''}${cur}=${data[cur]}`
+  }, '')
+}

@@ -1030,7 +1030,7 @@
   // call,apply 传入执行this的时候是用在函数  执行 时候的
   // bind 是传一个类似回调函数是bind的
 
-  var dom = /*#__PURE__*/Object.freeze({
+  var Dom = /*#__PURE__*/Object.freeze({
     attr: attr,
     hasClass: hasClass,
     html: html,
@@ -1041,6 +1041,173 @@
     removeProp: removeProp,
     toggleClass: toggleClass,
     val: val
+  });
+
+  /**
+   * CSS
+   * 设置和获取元素的 CSS 相关的属性。
+   */
+
+  function getStyles(element) {
+    return element && window.getComputedStyle(element, null);
+  }
+
+  // 获取某css属性
+  function getPropertyValue(element, propertyName) {
+    return getStyles(element).getPropertyValue(propertyName);
+  }
+
+  function getPropertyNum(element, propertyName) {
+    return getPropertyValue(element, propertyName).replace(/px/, '') * 1;
+  }
+
+  // 获取匹配元素集合中的第一个元素的样式属性的值设置每个匹配元素的一个或多个CSS属性。
+  function css(propertyName, value) {
+    var nodes = this.element;
+    var firstNode = nodes[0];
+
+    switch (true) {
+      // .css( propertyNames )
+      case isArray(propertyName) && isUndef(value):
+        if (firstNode) {
+          var obj = {};
+          propertyName.map(function (name) {
+            obj[name] = getPropertyValue(firstNode, name);
+          });
+          return obj;
+        }
+        break;
+
+      // .css( propertyName )
+      case isString(propertyName) && isUndef(value):
+        return firstNode && getPropertyValue(firstNode, propertyName) || this;
+
+      // .css( propertyName, function(index, value) )
+      case isString(propertyName) && isFunction(value):
+        nodes.map(function (node, index) {
+          var callback = value;
+          callback(index, getPropertyValue(node, propertyName));
+        });
+        break;
+
+      // .css( propertyName, value )
+      case isString(propertyName) && isDef(value):
+        nodes.map(function (node, index) {
+          node.style[propertyName] = value;
+        });
+        break;
+
+      // .css( properties )
+      case isPlainObject(propertyName) && isUndef(value):
+        nodes.map(function (node) {
+          for (var i in propertyName) {
+            node.style[i] = propertyName[i];
+          }
+        });
+        break;
+    }
+
+    return this;
+  }
+
+  /**
+   * 设置元素width/height
+   * @param {string} type width|height
+   * @param {Boolean} isPadding 是否计算padding
+   * @param {Boolean} isBorder 是否计算border
+   */
+  function _widthOrHeight() {
+    var isPadding = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+    var isBorder = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+    var isContentBox = css.call(this, 'box-sizing') === 'content-box';
+    var originValue = css.call(this, 'height').replace(/px/, '') * 1;
+    var nodes = this.element;
+    var firstNode = nodes[0];
+    var val = originValue; // 最终返回结果
+    if (isContentBox) {
+      if (isPadding) {
+        val += getPropertyNum(firstNode, 'padding-top') + getPropertyNum(firstNode, 'padding-bottom');
+      }
+      if (isBorder) {
+        val += getPropertyNum(firstNode, 'border-top-width') + getPropertyNum(firstNode, 'border-bottom-width');
+      }
+    } else {
+      if (isPadding && !isBorder) {
+        val -= getPropertyNum(firstNode, 'border-top-width') + getPropertyNum(firstNode, 'border-bottom-width');
+      } else if (!isPadding && !isBorder) {
+        val -= getPropertyNum(firstNode, 'padding-top') + getPropertyNum(firstNode, 'padding-bottom');
+
+        val -= getPropertyNum(firstNode, 'border-top-width') + getPropertyNum(firstNode, 'border-bottom-width');
+      }
+    }
+
+    return val;
+    // if (isUndef(value)) {
+    //   return css.call(this, type)
+    // } else {
+    //   return css.call(this, type, value)
+    // }
+  }
+
+  // 获取匹配元素集合中的第一个元素的当前计算高度值(返回内容高度数值)。设置每一个匹配元素的高度值。
+  function height() {
+    return _widthOrHeight.call(this, false, false);
+  }
+
+  // 为匹配的元素集合中获取第一个元素的当前计算高度值,包括padding，但是不包括border。
+  function innerHeight() {
+    return _widthOrHeight.call(this, true, false);
+  }
+
+  // 为匹配的元素集合中获取第一个元素的当前计算宽度值,包括padding，但是不包括border。
+  function innerWidth() {}
+
+  // 在匹配的元素集合中，获取的第一个元素的当前坐标，坐标相对于文档。 设置匹配的元素集合中每一个元素的坐标， 坐标相对于文档。
+  function offset() {}
+
+  /**
+   * 获取元素集合中第一个元素的当前计算高度值,包括padding，border和选择性的margin。返回一个整数（不包含“px”）表示的值  ，或如果在一个空集合上调用该方法，则会返回 null。
+   * @param {Boolean} includeMargin
+   */
+  function outerHeight(includeMargin) {
+    return _widthOrHeight.call(this, true, true);
+  }
+
+  // 获取元素集合中第一个元素的当前计算宽度值,包括padding，border和选择性的margin。（注：返回一个整数（不包含“px”）表示的值，或如果在一个空集合上调用该方法，则会返回 null。）
+  function outerWidth() {}
+
+  // 获取匹配元素中第一个元素的当前坐标，相对于offset parent的坐标。( 译者注：offset parent指离该元素最近的而且被定位过的祖先元素 )
+  function position() {}
+
+  // 获取匹配的元素集合中第一个元素的当前水平滚动条的位置。设置每个匹配元素的水平滚动条位置。
+  function scrollLeft() {}
+
+  // 获取匹配的元素集合中第一个元素的当前垂直滚动条的位置或设置每个匹配元素的垂直滚动条位置。设置每个匹配元素的垂直滚动条位置
+  function scrollTop() {}
+
+  // 为匹配的元素集合中获取第一个元素的当前计算宽度值。给每个匹配的元素设置CSS宽度。
+  function width(value) {}
+
+  /**
+   *  -----------------知识点补充------------------------
+   * 获取元素的css方法，getComputedStyle以及getPropertyValue
+   * 元素css.style.xx方法若样式没写获取无效
+   * getComputedStyle是一个可以获取当前元素所有最终使用的CSS属性值。返回的是一个CSS样式声明对象([object CSSStyleDeclaration])，只读。
+   */
+
+  var Css = /*#__PURE__*/Object.freeze({
+    css: css,
+    height: height,
+    innerHeight: innerHeight,
+    innerWidth: innerWidth,
+    offset: offset,
+    outerHeight: outerHeight,
+    outerWidth: outerWidth,
+    position: position,
+    scrollLeft: scrollLeft,
+    scrollTop: scrollTop,
+    width: width
   });
 
   /**
@@ -1280,6 +1447,159 @@
    */
   var when$1 = when;
 
+  var Core = /*#__PURE__*/Object.freeze({
+    holdReady: holdReady,
+    noConflict: noConflict,
+    ready: ready,
+    readyException: readyException,
+    when: when$1
+  });
+
+  var initData = {
+    accepts: {}, // 内容类型发送请求头
+    async: true, // 默认设置下，所有请求均为异步请求
+    beforeSend: null, // 请求发送前的回调函数
+    cache: false, // 如果设置为 false ，浏览器将不缓存此页面
+    complete: null, // 请求完成后回调函数
+    contents: null, // 一个以"{字符串/正则表达式}"配对的对象，根据给定的内容类型，解析请求的返回结果。
+    contentType: '', // 发送信息至服务器时内容编码类型
+    context: null, // 这个对象用于设置Ajax相关回调函数的上下文
+    crossDomain: false, // 如果你想在同一域中强制跨域请求（如JSONP形式）
+    data: null, // Object, String  发送到服务器的数据
+    dataFilter: null, // 一个函数被用来处理XMLHttpRequest的原始响应数据
+    dataType: '', // 预期服务器返回的数据类型 (默认: Intelligent Guess (xml, json, script, or html))
+    error: function error() {},
+    global: true, // 无论怎么样这个请求将触发全局AJAX事件处理程序
+    headers: {}, // 一个额外的"{键:值}"对映射到请求一起发送。
+    ifModified: false, // 只有上次请求响应改变时，才允许请求成功
+    isLocal: true, // 允许当前环境被认定为“本地”,默认：取决于当前的位置协议
+    jsonp: false, // 在一个jsonp请求中重写回调函数的名字。
+    jsonpCallback: null, // 为jsonp请求指定一个回调函数名。这个值将用来取代jQuery自动生成的随机函数名。
+    mimeType: '', // 一个mime类型用来覆盖XHR的 MIME类型
+    password: '', // 用于响应HTTP访问认证请求的密码
+    /**
+     * 默认情况下，通过data选项传递进来的数据，如果是一个对象(技术上讲只要不是字符串)，都会处理转化成一个查询字符串，以配合默认内容类型 "application/x-www-form-urlencoded"。如果要发送 DOM 树信息或其它不希望转换的信息，请设置为 false。
+     */
+    processData: true,
+    scriptCharset: {}, // 仅适用于当"script"传输使用时（例如，跨域的"jsonp"或 dataType选项为"script" 和 "GET"类型）
+    statusCode: {}, // 一组数值的HTTP代码和函数对象，当响应时调用了相应的代码。
+    success: null, // 请求成功后的回调函数。这个函数传递3个参数：从服务器返回的数据，并根据dataType参数进行处理后的数据，一个描述状态的字符串;还有 jqXHR
+    timeout: null, // 设置请求超时时间（毫秒）
+    traditional: false, // 如果你想要用传统的方式来序列化数据，那么就设置为true
+    type: 'GET', // 请求方式 ("POST" 或 "GET")， 默认为 "GET"。注意:其它 HTTP 请求方法，如 PUT 和 DELETE 也可以使用，但仅部分浏览器支持。
+    url: window.location.href, // 发送请求的地址。
+    username: '', // 响应HTTP访问认证请求的用户名
+    xhr: '', // 回调创建XMLHttpRequest对象。当可用时默认为ActiveXObject（IE）中，否则为XMLHttpRequest。提供覆盖你自己的执行的XMLHttpRequest或增强工厂。
+    xhrFields: null // 一对“文件名-文件值”组成的映射，用于设定原生的 XHR对象。例如，如果需要的话，在进行跨域请求时，你可以用它来设置withCredentials为true。
+  };
+
+  /**
+   * Ajax 底层接口
+   */
+
+  /**
+   * 执行一个异步的HTTP（Ajax）的请求。
+   * @param {String} url 一个用来包含发送请求的URL字符串。
+   * @param {Object} settings 一个以"{键:值}"组成的AJAX 请求设置。所有选项都是可选的
+  */
+  var ajax = function ajax(url, settings) {
+    var xhr = new window.XMLHttpRequest(); // 新建XMLHttpRequest对象
+    var st = Object.assign(initData, settings || {}); // 合并传入参数
+
+    st.type = !['GET', 'POST', 'PUT', 'DELETE'].includes(st.type) || 'GET';
+    st.beforeSend && st.beforeSend(xhr);
+
+    //
+    Object.keys(st.xhrFields).forEach(function (i) {
+      if (xhr.status === i) {
+        st.statusCode[i]();
+      }
+    });
+
+    st.timeout && (xhr.timeout = st.timeout);
+    return new Promise(function (resolve, reject) {
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          // 判断响应结果:
+          if (xhr.status === 200) {
+            st.success && st.success(xhr.response);
+            resolve();
+          } else {
+            st.error && st.error(xhr);
+            reject(xhr);
+          }
+
+          // 触发传入statusCode回调
+          Object.keys(st.statusCode).forEach(function (i) {
+            if (xhr.status === i) {
+              st.statusCode[i]();
+            }
+          });
+
+          st.complete && st.complete(xhr);
+        }
+      };
+
+      xhr.ontimeout = function (e) {
+        console.log('超时了');
+        st.error && st.error(xhr);
+        reject(xhr);
+      };
+
+      // 发送请求:
+      xhr.open(st.type, url || st.url, st.async);
+
+      Object.keys(st.accepts).forEach(function (i) {
+        xhr.setRequestHeader(i, st.accepts);
+      });
+
+      xhr.send();
+    });
+  };
+
+  // 在每个请求之前被发送和$.ajax()处理它们前处理，设置自定义Ajax选项或修改现有选项。
+  var ajaxPrefilter = function ajaxPrefilter() {};
+
+  // 为以后要用到的Ajax请求设置默认的值
+  var ajaxSetup = function ajaxSetup() {};
+
+  // 创建一个对象，用于处理Ajax数据的实际传输。
+  var ajaxTransport = function ajaxTransport() {};
+
+  ajax('', {
+    data: {
+      appId: 'Xh',
+      yyuid: 50043243
+    },
+    xhrFields: {
+      withCredentials: true
+    },
+    accepts: {
+      'Content-Type': 'application/javascript'
+    },
+    success: function success(res) {
+      console.log('成功返回内容', res);
+    },
+    error: function error(e) {
+      console.log('错误', e);
+    }
+  }).then(function () {
+    console.log('then');
+  });
+
+  /**
+   *  -----------------知识点补充------------------------
+   * XMLHttpRequest
+   * request.setRequestHeader是在request.open 和send之间调用的
+   */
+
+  var index = {
+    ajax: ajax,
+    ajaxPrefilter: ajaxPrefilter,
+    ajaxSetup: ajaxSetup,
+    ajaxTransport: ajaxTransport
+  };
+
   /**
    * sizzle引擎，根据传入选择器返回元素,根据传入选择器从右往左向dom属往上查询
    * https://github.com/jquery/sizzle
@@ -1297,23 +1617,23 @@
     return Array.prototype.slice.call(element); // 数组转换或者[].slice.call(arr);
   }
 
-  // 2019/10/12 之前根据传入内容不断返回全局的jQuery,并且函数用了柯里化去返回这样会导致每次调用这个方法的数据共享，改进这个情况故返回一个对象
+  // 2019/10/12 之前根据传入内容不断返回全局的jQuery,并且函数用了柯里化去返回这样会导致每次调用这个方法的数据共享，改进这个情况故返回一个新的对象
   function jquery(selector) {
     var elements = _getTargetElement(selector);
 
     return Object.assign({
       selector: selector,
-      element: _getTargetElement(selector),
+      element: elements,
       length: elements.length
-    }, dom);
+    }, Dom, Css);
   }
 
+  // 合并方法到jquery上去
+  var mergeMethods = Object.assign({}, Core, index);
+  for (var i in mergeMethods) {
+    jquery[i] = mergeMethods[i];
+  }
   jquery.Callbacks = Callbacks;
-  jquery.holdReady = holdReady;
-  jquery.noConflict = noConflict;
-  jquery.ready = ready;
-  jquery.readyException = readyException;
-  jquery.when = when$1;
 
   window.$ = window.Jquery = window.jquery = jquery;
   window.Promise = Promise;

@@ -41,13 +41,13 @@ export function attr (attributeName, value) {
     case isString(attributeName) && isUndef(value):
       nodes[0] && nodes[0].getAttribute(attributeName)
       break
-      // .attr( attributeName, value )
+    // .attr( attributeName, value )
     case isString(attributeName) && isDef(value):
       nodes.forEach(node => {
         node.setAttribute(attributeName, value)
       })
       break
-      // .attr( attributes )
+    // .attr( attributes )
     case isPlainObject(attributeName) && isUndef(value):
       nodes.forEach(node => {
         Object.keys(attributeName).forEach((item, i) => {
@@ -55,7 +55,7 @@ export function attr (attributeName, value) {
         })
       })
       break
-      // .attr( attributeName, function(index, attr) )
+    // .attr( attributeName, function(index, attr) )
     case isString(attributeName) && isFunction(value):
       nodes.forEach((node, nodeIndex) => {
         node.setAttribute(attributeName, value(nodeIndex, attributeName))
@@ -89,13 +89,13 @@ export function html (htmlString) {
         node.innerHTML = htmlString
       })
       break
-      // .html( function(index, oldhtml) )
+    // .html( function(index, oldhtml) )
     case isFunction(htmlString):
       nodes.forEach((node, nodeIndex) => {
         htmlString.call(node, nodeIndex, node.innerHTML)
       })
       break
-      // .html()
+    // .html()
     case isUndef(htmlString):
       return nodes[0] ? nodes[0].innerHTML : this
     default:
@@ -113,13 +113,13 @@ export function prop (propertyName, value) {
     // .prop( propertyName )
     case isString(propertyName) && isUndef(value):
       return nodes[0] && nodes[0][propertyName]
-      // .prop( propertyName, value )
+    // .prop( propertyName, value )
     case isString(propertyName) && isDef(value):
       nodes.forEach(node => {
         node[propertyName](value)
       })
       break
-      // .prop( attributes )
+    // .prop( attributes )
     case isPlainObject(propertyName) && isUndef(value):
       nodes.forEach(node => {
         Object.keys(propertyName).forEach((item, i) => {
@@ -127,7 +127,7 @@ export function prop (propertyName, value) {
         })
       })
       break
-      // .prop( propertyName, function(index, attr) )
+    // .prop( propertyName, function(index, attr) )
     case isString(propertyName) && isFunction(value):
       nodes.forEach((node, nodeIndex) => {
         const flag = value(nodeIndex, node[propertyName])
@@ -145,9 +145,9 @@ export function removeAttr (attributeName) {
   const nodes = this.element
 
   isString(attributeName) &&
-      nodes.forEach(node => {
-        node.removeAttribute(attributeName)
-      })
+    nodes.forEach(node => {
+      node.removeAttribute(attributeName)
+    })
 
   return this
 }
@@ -187,16 +187,16 @@ export function toggleClass (className, switchFlag) {
         })
       })
       break
-      // .toggleClass( className, switch )
+    // .toggleClass( className, switch )
     case isString(className) && isDef(switchFlag):
       classes = removeExtraSpace(className).split(' ')
-      nodes.forEach((node) => {
+      nodes.forEach(node => {
         classes.map(item => {
           switchFlag ? node.classList.remove(item) : node.classList.add(item)
         })
       })
       break
-      // .toggleClass( function(index, class, switch) [, switch ] )
+    // .toggleClass( function(index, class, switch) [, switch ] )
     case isFunction(className) && isUndef(switchFlag):
       nodes.forEach((node, nodeIndex) => {
         classes.map(item => {
@@ -205,7 +205,7 @@ export function toggleClass (className, switchFlag) {
         })
       })
       break
-      // .toggleClass( [switch ] )
+    // .toggleClass( [switch ] )
     case (isBoolean(className) || isUndef(className)) && isUndef(switchFlag):
       nodes.forEach((node, nodeIndex) => {
         if (isBoolean(className)) {
