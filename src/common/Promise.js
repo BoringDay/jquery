@@ -6,16 +6,28 @@ const REJECTED = 'REJECTED'
 
 // 第一版实现了单个then和reject函数的执行，对于多个then的时候并没有存储一个回调队列
 
-function Promise (fn) {
-  this._status = PENDING // 状态
-  this._value = undefined // then的值
-  this._fulfilledQuene = [] // resolved状态的回调函数队列
-  this._rejectedQuene = [] // resolved状态的回调函数队列
+class Promise {
+  constructor (fn) {
+    this._status = PENDING // 状态
+    this._value = undefined // then的值
+    this._fulfilledQuene = [] // resolved状态的回调函数队列
+    this._rejectedQuene = [] // resolved状态的回调函数队列
+
+    // 初始化
+    if (!isFunction(fn)) {
+      throw new Error('Promise must accept a function as a parameter')
+    }
+    try {
+      fn && fn(this.resolve.bind(this), this.reject.bind(this))
+    } catch (e) {
+      this.reject(e)
+    }
+  }
 
   /**
    * @param {any} val 包括可能是Promise，增加判断
    */
-  this.resolve = (val) => {
+  resolve (val) {
     if (this._status !== PENDING) return
 
     this._value = val
@@ -55,7 +67,7 @@ function Promise (fn) {
     }
   }
 
-  this.reject = (e) => {
+  reject (e) {
     if (this._status !== PENDING) return
 
     this._status = REJECTED
@@ -71,7 +83,7 @@ function Promise (fn) {
   * @param {function} onFulfilled resolved状态的回调函数
   * @param {function} onRejected rejected状态的回调函数
   */
-  this.then = (onFulfilled, onRejected) => {
+  then (onFulfilled, onRejected) {
     // eslint-disable-next-line promise/param-names
     return new Promise((onFulfilledNext, onRejectedNext) => {
       /**
@@ -134,26 +146,14 @@ function Promise (fn) {
   /**
    * @param {function} onRejected rejected状态的回调函数
    */
-  this.catch = (onRejected) => {
+  catch (onRejected) {
     // onRejected && this._rejectedQuene.push(onRejected) =>可转换为下面写法
     return this.then(undefined, onRejected)
   }
 
-  this.finally = (onFinally) => {
+  finally (onFinally) {
     return this.then(onFinally, onFinally)
   }
-
-  // 初始化
-  if (!isFunction(fn)) {
-    throw new Error('Promise must accept a function as a parameter')
-  }
-  try {
-    fn && fn(this.resolve.bind(this), this.reject.bind(this))
-  } catch (e) {
-    this.reject(e)
-  }
-
-  return this
 }
 
 export default Promise

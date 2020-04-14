@@ -4,6 +4,7 @@ try to achieve some function like jquery
 
 ## 目录结构
 
+```
 ├── Readme.md
 ├── src // 配置  
 │ ├── core  
@@ -15,6 +16,7 @@ try to achieve some function like jquery
 │ ├── library //外部库  
 | |  
 │ ├── util // 工具类
+```
 
 ## rollup
 

@@ -632,163 +632,235 @@
     return isString(val) ? val.replace(/[' ']+/g, ' ') : '';
   }
 
+  function formatQueryString(data) {
+    return Object.keys(data).reduce(function (prev, cur) {
+      return '' + (prev ? prev + '&' : '') + cur + '=' + data[cur];
+    }, '');
+  }
+
+  var classCallCheck = function (instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  };
+
+  var createClass = function () {
+    function defineProperties(target, props) {
+      for (var i = 0; i < props.length; i++) {
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, descriptor.key, descriptor);
+      }
+    }
+
+    return function (Constructor, protoProps, staticProps) {
+      if (protoProps) defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) defineProperties(Constructor, staticProps);
+      return Constructor;
+    };
+  }();
+
+  var inherits = function (subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+    }
+
+    subClass.prototype = Object.create(superClass && superClass.prototype, {
+      constructor: {
+        value: subClass,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+  };
+
+  var possibleConstructorReturn = function (self, call) {
+    if (!self) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return call && (typeof call === "object" || typeof call === "function") ? call : self;
+  };
+
   var PENDING = 'PENDING';
   var FULFILLED = 'FULFILLED';
   var REJECTED = 'REJECTED';
 
   // 第一版实现了单个then和reject函数的执行，对于多个then的时候并没有存储一个回调队列
 
-  function Promise(fn) {
-    var _this = this;
+  var Promise$1 = function () {
+    function Promise(fn) {
+      classCallCheck(this, Promise);
 
-    this._status = PENDING; // 状态
-    this._value = undefined; // then的值
-    this._fulfilledQuene = []; // resolved状态的回调函数队列
-    this._rejectedQuene = []; // resolved状态的回调函数队列
+      this._status = PENDING; // 状态
+      this._value = undefined; // then的值
+      this._fulfilledQuene = []; // resolved状态的回调函数队列
+      this._rejectedQuene = []; // resolved状态的回调函数队列
+
+      // 初始化
+      if (!isFunction(fn)) {
+        throw new Error('Promise must accept a function as a parameter');
+      }
+      try {
+        fn && fn(this.resolve.bind(this), this.reject.bind(this));
+      } catch (e) {
+        this.reject(e);
+      }
+    }
 
     /**
      * @param {any} val 包括可能是Promise，增加判断
      */
-    this.resolve = function (val) {
-      if (_this._status !== PENDING) return;
 
-      _this._value = val;
 
-      var runFullfilled = function runFullfilled(data) {
-        while (_this._fulfilledQuene.length) {
-          var callback = _this._fulfilledQuene.shift();
-          callback(data);
+    createClass(Promise, [{
+      key: 'resolve',
+      value: function resolve(val) {
+        var _this = this;
+
+        if (this._status !== PENDING) return;
+
+        this._value = val;
+
+        var runFullfilled = function runFullfilled(data) {
+          while (_this._fulfilledQuene.length) {
+            var callback = _this._fulfilledQuene.shift();
+            callback(data);
+          }
+        };
+
+        var runRejected = function runRejected(e) {
+          while (_this._rejectedQuene.length) {
+            var callback = _this._rejectedQuene.shift();
+            callback(e);
+          }
+        };
+
+        /**
+         * 如果resolve的参数为Promise对象，则必须等待该Promise对象状态改变后,
+         * 当前Promsie的状态才会改变，且状态取决于参数Promsie对象的状态
+         */
+        if (val instanceof Promise) {
+          val.then(function (data) {
+            _this._status = FULFILLED;
+            _this._value = data;
+            runFullfilled(data);
+          }).catch(function (e) {
+            _this._status = REJECTED;
+            _this._value = e;
+            runRejected(e);
+          });
+        } else {
+          this._status = FULFILLED;
+          this._value = val;
+          runFullfilled(this._value);
         }
-      };
+      }
+    }, {
+      key: 'reject',
+      value: function reject(e) {
+        if (this._status !== PENDING) return;
 
-      var runRejected = function runRejected(e) {
-        while (_this._rejectedQuene.length) {
-          var callback = _this._rejectedQuene.shift();
-          callback(e);
+        this._status = REJECTED;
+        this._value = e;
+
+        while (this._rejectedQuene.length) {
+          this._rejectedQuene.shift()(e);
         }
-      };
+      }
 
       /**
-       * 如果resolve的参数为Promise对象，则必须等待该Promise对象状态改变后,
-       * 当前Promsie的状态才会改变，且状态取决于参数Promsie对象的状态
-       */
-      if (val instanceof Promise) {
-        val.then(function (data) {
-          _this._status = FULFILLED;
-          _this._value = data;
-          runFullfilled(data);
-        }).catch(function (e) {
-          _this._status = REJECTED;
-          _this._value = e;
-          runRejected(e);
+      * then 返回一个新的 Promise 对象，并且需要将回调函数加入到执行队列中
+      * @param {function} onFulfilled resolved状态的回调函数
+      * @param {function} onRejected rejected状态的回调函数
+      */
+
+    }, {
+      key: 'then',
+      value: function then(onFulfilled, onRejected) {
+        var _this2 = this;
+
+        // eslint-disable-next-line promise/param-names
+        return new Promise(function (onFulfilledNext, onRejectedNext) {
+          /**
+           * 注意：
+           * 返回的新的 Promise 对象的状态依赖于  当前 then 方法  回调函数执行的情况以及返回值
+           */
+          var fulfilled = function fulfilled(value) {
+            try {
+              if (!isFunction(onFulfilled)) {
+                onFulfilledNext(value);
+              } else {
+                var res = onFulfilled(value);
+                if (res instanceof Promise) {
+                  // 如果当前回调函数返回Promise对象，必须等待其状态改变后在执行下一个回调
+                  res.then(onFulfilledNext, onRejectedNext);
+                } else {
+                  // 否则会将返回结果直接作为参数，传入下一个then的回调函数，并立即执行下一个then的回调函数
+                  onFulfilledNext(res);
+                }
+              }
+            } catch (e) {
+              onRejectedNext(e);
+            }
+          };
+
+          // 逻辑同上
+          var rejected = function rejected(error) {
+            try {
+              if (!isFunction(onRejected)) {
+                onRejectedNext(error);
+              } else {
+                var res = onRejected(error);
+                if (res instanceof Promise) {
+                  res.then(onFulfilledNext, onRejectedNext);
+                } else {
+                  onFulfilledNext(res);
+                }
+              }
+            } catch (e) {
+              onRejectedNext(e);
+            }
+          };
+
+          // 增加状态判断
+          switch (_this2._status) {
+            case PENDING:
+              onFulfilled && _this2._fulfilledQuene.push(fulfilled);
+              onRejected && _this2._rejectedQuene.push(rejected);
+              break;
+            case FULFILLED:
+              fulfilled(_this2._value);
+              break;
+            case REJECTED:
+              rejected(_this2._value);
+              break;
+          }
         });
-      } else {
-        _this._status = FULFILLED;
-        _this._value = val;
-        runFullfilled(_this._value);
       }
-    };
 
-    this.reject = function (e) {
-      if (_this._status !== PENDING) return;
+      /**
+       * @param {function} onRejected rejected状态的回调函数
+       */
 
-      _this._status = REJECTED;
-      _this._value = e;
-
-      while (_this._rejectedQuene.length) {
-        _this._rejectedQuene.shift()(e);
+    }, {
+      key: 'catch',
+      value: function _catch(onRejected) {
+        // onRejected && this._rejectedQuene.push(onRejected) =>可转换为下面写法
+        return this.then(undefined, onRejected);
       }
-    };
-
-    /**
-    * then 返回一个新的 Promise 对象，并且需要将回调函数加入到执行队列中
-    * @param {function} onFulfilled resolved状态的回调函数
-    * @param {function} onRejected rejected状态的回调函数
-    */
-    this.then = function (onFulfilled, onRejected) {
-      // eslint-disable-next-line promise/param-names
-      return new Promise(function (onFulfilledNext, onRejectedNext) {
-        /**
-         * 注意：
-         * 返回的新的 Promise 对象的状态依赖于  当前 then 方法  回调函数执行的情况以及返回值
-         */
-        var fulfilled = function fulfilled(value) {
-          try {
-            if (!isFunction(onFulfilled)) {
-              onFulfilledNext(value);
-            } else {
-              var res = onFulfilled(value);
-              if (res instanceof Promise) {
-                // 如果当前回调函数返回Promise对象，必须等待其状态改变后在执行下一个回调
-                res.then(onFulfilledNext, onRejectedNext);
-              } else {
-                // 否则会将返回结果直接作为参数，传入下一个then的回调函数，并立即执行下一个then的回调函数
-                onFulfilledNext(res);
-              }
-            }
-          } catch (e) {
-            onRejectedNext(e);
-          }
-        };
-
-        // 逻辑同上
-        var rejected = function rejected(error) {
-          try {
-            if (!isFunction(onRejected)) {
-              onRejectedNext(error);
-            } else {
-              var res = onRejected(error);
-              if (res instanceof Promise) {
-                res.then(onFulfilledNext, onRejectedNext);
-              } else {
-                onFulfilledNext(res);
-              }
-            }
-          } catch (e) {
-            onRejectedNext(e);
-          }
-        };
-
-        // 增加状态判断
-        switch (_this._status) {
-          case PENDING:
-            onFulfilled && _this._fulfilledQuene.push(fulfilled);
-            onRejected && _this._rejectedQuene.push(rejected);
-            break;
-          case FULFILLED:
-            fulfilled(_this._value);
-            break;
-          case REJECTED:
-            rejected(_this._value);
-            break;
-        }
-      });
-    };
-
-    /**
-     * @param {function} onRejected rejected状态的回调函数
-     */
-    this.catch = function (onRejected) {
-      // onRejected && this._rejectedQuene.push(onRejected) =>可转换为下面写法
-      return _this.then(undefined, onRejected);
-    };
-
-    this.finally = function (onFinally) {
-      return _this.then(onFinally, onFinally);
-    };
-
-    // 初始化
-    if (!isFunction(fn)) {
-      throw new Error('Promise must accept a function as a parameter');
-    }
-    try {
-      fn && fn(this.resolve.bind(this), this.reject.bind(this));
-    } catch (e) {
-      this.reject(e);
-    }
-
-    return this;
-  }
+    }, {
+      key: 'finally',
+      value: function _finally(onFinally) {
+        return this.then(onFinally, onFinally);
+      }
+    }]);
+    return Promise;
+  }();
 
   /**
    * DOM 属性
@@ -1455,7 +1527,11 @@
     when: when$1
   });
 
-  var initData = {
+  /*
+   * ajax请求默认参数
+  */
+
+  var _initData = {
     accepts: {}, // 内容类型发送请求头
     async: true, // 默认设置下，所有请求均为异步请求
     beforeSend: null, // 请求发送前的回调函数
@@ -1465,7 +1541,7 @@
     contentType: '', // 发送信息至服务器时内容编码类型
     context: null, // 这个对象用于设置Ajax相关回调函数的上下文
     crossDomain: false, // 如果你想在同一域中强制跨域请求（如JSONP形式）
-    data: null, // Object, String  发送到服务器的数据
+    data: {}, // Object, String  发送到服务器的数据
     dataFilter: null, // 一个函数被用来处理XMLHttpRequest的原始响应数据
     dataType: '', // 预期服务器返回的数据类型 (默认: Intelligent Guess (xml, json, script, or html))
     error: function error() {},
@@ -1474,7 +1550,7 @@
     ifModified: false, // 只有上次请求响应改变时，才允许请求成功
     isLocal: true, // 允许当前环境被认定为“本地”,默认：取决于当前的位置协议
     jsonp: false, // 在一个jsonp请求中重写回调函数的名字。
-    jsonpCallback: null, // 为jsonp请求指定一个回调函数名。这个值将用来取代jQuery自动生成的随机函数名。
+    jsonpCallback: undefined, // 为jsonp请求指定一个回调函数名。这个值将用来取代jQuery自动生成的随机函数名。
     mimeType: '', // 一个mime类型用来覆盖XHR的 MIME类型
     password: '', // 用于响应HTTP访问认证请求的密码
     /**
@@ -1490,40 +1566,116 @@
     url: window.location.href, // 发送请求的地址。
     username: '', // 响应HTTP访问认证请求的用户名
     xhr: '', // 回调创建XMLHttpRequest对象。当可用时默认为ActiveXObject（IE）中，否则为XMLHttpRequest。提供覆盖你自己的执行的XMLHttpRequest或增强工厂。
-    xhrFields: null // 一对“文件名-文件值”组成的映射，用于设定原生的 XHR对象。例如，如果需要的话，在进行跨域请求时，你可以用它来设置withCredentials为true。
+    xhrFields: {} // 一对“文件名-文件值”组成的映射，用于设定原生的 XHR对象。例如，如果需要的话，在进行跨域请求时，你可以用它来设置withCredentials为true。
   };
 
-  /**
-   * Ajax 底层接口
-   */
+  var AjaxPromise = function (_Promise) {
+    inherits(AjaxPromise, _Promise);
 
-  /**
-   * 执行一个异步的HTTP（Ajax）的请求。
-   * @param {String} url 一个用来包含发送请求的URL字符串。
-   * @param {Object} settings 一个以"{键:值}"组成的AJAX 请求设置。所有选项都是可选的
-  */
-  var ajax = function ajax(url, settings) {
-    var xhr = new window.XMLHttpRequest(); // 新建XMLHttpRequest对象
-    var st = Object.assign(initData, settings || {}); // 合并传入参数
+    function AjaxPromise() {
+      classCallCheck(this, AjaxPromise);
+      return possibleConstructorReturn(this, (AjaxPromise.__proto__ || Object.getPrototypeOf(AjaxPromise)).apply(this, arguments));
+    }
 
-    st.type = !['GET', 'POST', 'PUT', 'DELETE'].includes(st.type) || 'GET';
-    st.beforeSend && st.beforeSend(xhr);
-
-    //
-    Object.keys(st.xhrFields).forEach(function (i) {
-      if (xhr.status === i) {
-        st.statusCode[i]();
+    createClass(AjaxPromise, [{
+      key: 'done',
+      value: function done(onFulfilled, onRejected) {
+        return this.then(onFulfilled, onRejected);
       }
+    }, {
+      key: 'fail',
+      value: function fail(onRejected) {
+        return this.catch(onRejected);
+      }
+    }, {
+      key: 'always',
+      value: function always(onFinally) {
+        return this.finally(onFinally);
+      }
+    }]);
+    return AjaxPromise;
+  }(Promise$1);
+
+  var count = 10000;
+  var head = document.getElementsByTagName('head');
+  var headEl = head && head[0];
+
+  // 插入或删除script
+  var insertOrRemoveScript = function insertOrRemoveScript(type, script) {
+    if (!headEl) return;
+
+    if (type === 'insert') headEl.appendChild(script);else headEl.removeChild(script);
+  };
+
+  var scriptAjax = function scriptAjax(url, success) {
+    return new AjaxPromise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = url;
+
+      // 只有把script当做dom节点插进去时，里面的代码才可以正常执行
+      insertOrRemoveScript('insert', script);
+
+      script.onload = function (e) {
+        success && success();
+        reject(e);
+      };
+
+      return script;
+    });
+  };
+
+  // jsonp请求
+  var jsonpAjax = function jsonpAjax(settings) {
+    var st = settings;
+    var jsonpMethod = st.jsonpCallback || 'jsonp_' + +new Date() + '_' + ++count;
+    var url = st.url + ((st.url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + jsonpMethod + '&' + formatQueryString(st.data));
+    var script = scriptAjax(url);
+
+    return new AjaxPromise(function (resolve, reject) {
+      window[jsonpMethod] = function (data) {
+        st.success && st.success(data);
+        resolve(data);
+
+        // 删除script
+        insertOrRemoveScript('remove', script);
+      };
+
+      script.onerror = function (e) {
+        st.error && st.error(e);
+        reject(e);
+      };
+    });
+  };
+
+  // XMLHttpRequest请求
+  var xhrRequestAjax = function xhrRequestAjax(settings) {
+    var st = settings;
+    var xhr = new window.XMLHttpRequest(); // 新建XMLHttpRequest对象
+
+    st.type = ['GET', 'POST', 'PUT', 'DELETE'].includes(st.type) ? st.type : 'GET';
+
+    // 处理请求参数
+    if (st.type === 'GET') {
+      var url = st.url + ('' + (st.url.indexOf('?') >= 0 ? '&' : '?') + formatQueryString(st.data));
+      st.url = url;
+    }
+
+    // xhrFields:设定原生的 XHR对象
+    Object.keys(st.xhrFields).forEach(function (i) {
+      xhr[i] = st.xhrFields[i];
     });
 
+    st.beforeSend && st.beforeSend(xhr);
+
     st.timeout && (xhr.timeout = st.timeout);
-    return new Promise(function (resolve, reject) {
+    return new AjaxPromise(function (resolve, reject) {
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           // 判断响应结果:
           if (xhr.status === 200) {
             st.success && st.success(xhr.response);
-            resolve();
+            resolve(xhr.response);
           } else {
             st.error && st.error(xhr);
             reject(xhr);
@@ -1541,56 +1693,109 @@
       };
 
       xhr.ontimeout = function (e) {
-        console.log('超时了');
         st.error && st.error(xhr);
         reject(xhr);
       };
 
       // 发送请求:
-      xhr.open(st.type, url || st.url, st.async);
+      xhr.open(st.type, st.url, st.async);
 
       Object.keys(st.accepts).forEach(function (i) {
-        xhr.setRequestHeader(i, st.accepts);
+        xhr.setRequestHeader(i, st.accepts[i]);
       });
 
       xhr.send();
     });
   };
 
+  /**
+   * fetch 请求
+   * Fetch API 提供了一个 JavaScript接口，用于访问和操纵HTTP管道的部分，例如请求和响应。它还提供了一个全局 fetch()方法，该方法提供了一种简单，合理的方式来跨网络异步获取资源。这种功能以前是使用  XMLHttpRequest实现的。
+   */
+  var fetchRequestAjax = function fetchRequestAjax(settings) {
+    var st = settings;
+    st.type = ['GET', 'POST', 'PUT', 'DELETE'].includes(st.type) ? st.type : 'GET';
+
+    var option = {
+      method: st.type,
+      cache: st.cache ? 'force-cache' : 'no-cache',
+      mode: 'same-origin'
+
+      // 处理请求参数
+    };if (st.type === 'GET') {
+      var url = st.url + ('' + (st.url.indexOf('?') >= 0 ? '&' : '?') + formatQueryString(st.data));
+      st.url = url;
+    } else {
+      option.body = JSON.stringify(st.data);
+    }
+
+    // 处理header
+    Object.keys(st.accepts).forEach(function (i) {
+      st.headers[i] = st.accepts[i];
+    });
+
+    option.headers = st.headers;
+
+    return new AjaxPromise(function (resolve, reject) {
+      window.fetch(st.url, option).then(function (response) {
+        st.success && st.success(response);
+        resolve(response.json());
+      }).catch(function (e) {
+        st.error && st.error(e);
+        reject(e);
+      });
+    });
+  };
+
+  /**
+   * Ajax 底层接口
+   */
+
+  var initData = _initData;
+
+  /**
+   * 执行一个异步的HTTP（Ajax）的请求。
+   * @param {String} url 一个用来包含发送请求的URL字符串。
+   * @param {Object} settings 一个以"{键:值}"组成的AJAX 请求设置。所有选项都是可选的
+  */
+  var ajax = function ajax(settings) {
+    var st = void 0;
+
+    if (isString(settings)) {
+      st = Object.assign(initData, { url: settings }); // 合并传入参数
+    } else if (isPlainObject(settings)) {
+      st = Object.assign(initData, settings || {}); // 合并传入参数
+    } else {
+      throw new Error('参数错误');
+    }
+
+    if (st.jsonp) {
+      return jsonpAjax(st);
+    } else {
+      return window.fetch ? fetchRequestAjax(st) : xhrRequestAjax(st);
+    }
+  };
+
   // 在每个请求之前被发送和$.ajax()处理它们前处理，设置自定义Ajax选项或修改现有选项。
   var ajaxPrefilter = function ajaxPrefilter() {};
 
   // 为以后要用到的Ajax请求设置默认的值
-  var ajaxSetup = function ajaxSetup() {};
+  var ajaxSetup = function ajaxSetup(options) {
+    if (!isPlainObject(options)) {
+      throw new Error('参数错误');
+    }
+    initData = Object.assign(initData, options);
+  };
 
   // 创建一个对象，用于处理Ajax数据的实际传输。
   var ajaxTransport = function ajaxTransport() {};
-
-  ajax('', {
-    data: {
-      appId: 'Xh',
-      yyuid: 50043243
-    },
-    xhrFields: {
-      withCredentials: true
-    },
-    accepts: {
-      'Content-Type': 'application/javascript'
-    },
-    success: function success(res) {
-      console.log('成功返回内容', res);
-    },
-    error: function error(e) {
-      console.log('错误', e);
-    }
-  }).then(function () {
-    console.log('then');
-  });
 
   /**
    *  -----------------知识点补充------------------------
    * XMLHttpRequest
    * request.setRequestHeader是在request.open 和send之间调用的
+   * Content-type
+   * https://www.jianshu.com/p/ba40da728806
    */
 
   var index = {
@@ -1636,6 +1841,6 @@
   jquery.Callbacks = Callbacks;
 
   window.$ = window.Jquery = window.jquery = jquery;
-  window.Promise = Promise;
+  window.Promise = Promise$1;
 
 }());

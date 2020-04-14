@@ -1,3 +1,7 @@
+/*
+ * ajax请求默认参数
+*/
+
 export default {
   accepts: {}, // 内容类型发送请求头
   async: true, // 默认设置下，所有请求均为异步请求
@@ -8,7 +12,7 @@ export default {
   contentType: '', // 发送信息至服务器时内容编码类型
   context: null, // 这个对象用于设置Ajax相关回调函数的上下文
   crossDomain: false, // 如果你想在同一域中强制跨域请求（如JSONP形式）
-  data: null, // Object, String  发送到服务器的数据
+  data: {}, // Object, String  发送到服务器的数据
   dataFilter: null, // 一个函数被用来处理XMLHttpRequest的原始响应数据
   dataType: '', // 预期服务器返回的数据类型 (默认: Intelligent Guess (xml, json, script, or html))
   error: function () {},
@@ -17,7 +21,7 @@ export default {
   ifModified: false, // 只有上次请求响应改变时，才允许请求成功
   isLocal: true, // 允许当前环境被认定为“本地”,默认：取决于当前的位置协议
   jsonp: false, // 在一个jsonp请求中重写回调函数的名字。
-  jsonpCallback: null, // 为jsonp请求指定一个回调函数名。这个值将用来取代jQuery自动生成的随机函数名。
+  jsonpCallback: undefined, // 为jsonp请求指定一个回调函数名。这个值将用来取代jQuery自动生成的随机函数名。
   mimeType: '', // 一个mime类型用来覆盖XHR的 MIME类型
   password: '', // 用于响应HTTP访问认证请求的密码
   /**
@@ -33,5 +37,5 @@ export default {
   url: window.location.href, // 发送请求的地址。
   username: '', // 响应HTTP访问认证请求的用户名
   xhr: '', // 回调创建XMLHttpRequest对象。当可用时默认为ActiveXObject（IE）中，否则为XMLHttpRequest。提供覆盖你自己的执行的XMLHttpRequest或增强工厂。
-  xhrFields: null// 一对“文件名-文件值”组成的映射，用于设定原生的 XHR对象。例如，如果需要的话，在进行跨域请求时，你可以用它来设置withCredentials为true。
+  xhrFields: {}// 一对“文件名-文件值”组成的映射，用于设定原生的 XHR对象。例如，如果需要的话，在进行跨域请求时，你可以用它来设置withCredentials为true。
 }
